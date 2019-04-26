@@ -10,34 +10,25 @@ import (
 	"testing"
 )
 
-type file struct {
-	path string
-	enc  ImgEncoding
-}
-
 // TestPacker tests the image packer
 func TestPacker(t *testing.T) {
 	p := New(DefaultConfig())
 
-	var files []file
+	var files []string
 	err := filepath.Walk("./tests", func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, "jpg") && !strings.HasPrefix(info.Name(), "joined") {
-			files = append(files, file{path: path, enc: JPEG})
+			files = append(files, path)
 		}
 		return nil
 	})
 	require.NoError(t, err)
 
 	for _, file := range files {
-		t.Logf("Reading: %s", file.path)
-		f, err := os.Open(file.path)
+		t.Logf("Reading: %s", file)
+		f, err := os.Open(file)
 		require.NoError(t, err)
 		defer f.Close()
-		require.NoError(t, p.AddImage(f, file.enc))
-		// i--
-		// if i == 0 {
-		// break//
-		// }
+		require.NoError(t, p.AddImageReader(f))
 	}
 
 	images := p.PackedImages()

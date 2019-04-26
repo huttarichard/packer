@@ -3,13 +3,10 @@ package packer
 import (
 	"bytes"
 	"errors"
-	"golang.org/x/image/bmp"
 	"hash/crc64"
 	"image"
 	"image/draw"
-	"image/gif"
 	"image/jpeg"
-	"image/png"
 	"io"
 )
 
@@ -57,17 +54,6 @@ func (im *images) Swap(i, j int) {
 	im.inputImages[i], im.inputImages[j] = im.inputImages[j], im.inputImages[i]
 }
 
-// ImgEncoding is the image encoding enum
-type ImgEncoding int
-
-const (
-	_ ImgEncoding = iota
-	JPEG
-	PNG
-	BMP
-	GIF
-)
-
 var (
 	// ErrUnknownEncoding is an error that is thrown when the image is with unsupported encoding
 	ErrUnknownEncoding = errors.New("Unknown image encoding provided")
@@ -77,47 +63,54 @@ var (
 )
 
 // AddImageBytes add the image in the form of raw bytes
-func (p *Packer) AddImageBytes(data []byte, enc ImgEncoding) error {
-	return p.addImageBytes(data, enc)
+func (p *Packer) AddImageBytes(data []byte) error {
+	return p.addImageBytes(data)
 }
 
-// AddImage adds the image read from the reader
-func (p *Packer) AddImage(r io.Reader, enc ImgEncoding) error {
-	return p.addImage(r, enc)
+// AddImageReader adds the image from the reader
+func (p *Packer) AddImageReader(r io.Reader) error {
+	return p.addImage(r)
+}
+
+// AddImage adds the image with the hash provided
+func (p *Packer) AddImage(img image.Image, hash ...uint64) error {
+
+	var h uint64
+	if len(hash) == 0 || (len(hash) > 0 && hash[0] == 0) {
+
+		buf := &bytes.Buffer{}
+		if err := jpeg.Encode(buf, img, nil); err != nil {
+			return err
+		}
+		h = crc64.Checksum(buf.Bytes(), p.table)
+		buf.Reset()
+	} else {
+		h = hash[0]
+	}
+	return p.getInputImageData(img, h)
 }
 
 // AddImage creates the new texture for the provided
-func (p *Packer) addImageBytes(data []byte, enc ImgEncoding) error {
+func (p *Packer) addImageBytes(data []byte) error {
 	buf := bytes.NewBuffer(data)
-	return p.addImage(buf, enc)
+	return p.addImage(buf)
 }
 
-func (p *Packer) addImage(r io.Reader, enc ImgEncoding) error {
+func (p *Packer) addImage(r io.Reader) error {
 	buf := &bytes.Buffer{}
 	tee := io.TeeReader(r, buf)
-	t := &inputImage{}
 
-	var (
-		img image.Image
-		err error
-	)
-
-	switch enc {
-	case JPEG:
-		img, err = jpeg.Decode(tee)
-	case PNG:
-		img, err = png.Decode(tee)
-	case BMP:
-		img, err = bmp.Decode(tee)
-	case GIF:
-		img, err = gif.Decode(tee)
-	default:
-		return ErrUnknownEncoding
-	}
+	img, _, err := image.Decode(tee)
 	if err != nil {
 		return err
 	}
 
+	hash := crc64.Checksum(buf.Bytes(), p.table)
+
+	return p.getInputImageData(img, hash)
+}
+
+func (p *Packer) getInputImageData(img image.Image, hash uint64) error {
 	if img.Bounds().Dx() == 0 || img.Bounds().Dy() == 0 {
 		return ErrEmptyImage
 	}
@@ -127,9 +120,9 @@ func (p *Packer) addImage(r io.Reader, enc ImgEncoding) error {
 		dImg = image.NewRGBA(img.Bounds())
 		draw.Draw(dImg, dImg.Bounds(), img, img.Bounds().Min, draw.Src)
 	}
-
+	t := &inputImage{}
 	t.Image = dImg
-	t.hash = crc64.Checksum(buf.Bytes(), p.table)
+	t.hash = hash
 	t.id = p.getID()
 	t.size = dImg.Bounds()
 	t.crop = p.crop(dImg)

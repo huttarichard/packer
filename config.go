@@ -11,28 +11,27 @@ type Config struct {
 	Rotate            bool
 	Border            int
 	Extrude           int
-	Recursion         bool
+	AutoGrow          bool
 	Autosize          bool
 	CropThreshold     int
 	AutoSizeThreshold int
 	MinTextureSizeX   int
 	MinTextureSizeY   int
 	Heuristic         Heuristic
-	OutputFormat      ImgEncoding
 }
 
 // DefaultConfig returns the default config for the packer
 func DefaultConfig() *Config {
 	return &Config{
-		TextureHeight:     16384,
-		TextureWidth:      16384,
+		TextureHeight:     512,
+		TextureWidth:      512,
 		Merge:             true,
 		Crop:              true,
 		Border:            0,
 		Extrude:           0,
 		Rotate:            false,
-		Recursion:         true,
 		Square:            true,
+		AutoGrow:          true,
 		Autosize:          true,
 		CropThreshold:     1,
 		AutoSizeThreshold: 100,
@@ -40,6 +39,5 @@ func DefaultConfig() *Config {
 		MinTextureSizeX:   32,
 		MinTextureSizeY:   32,
 		Heuristic:         HBaf,
-		OutputFormat:      PNG,
 	}
 }

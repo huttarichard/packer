@@ -20,16 +20,16 @@ type Packer struct {
 	images *images
 	Root   *inputImage
 
-	cfg                 *Config
-	compare             int
-	area, neededArea    int64
-	missingImages       int
-	mergedImages        int
-	Ltr, merge, mergeBF bool
-	MinFillRate         int
-	cropThreshold       int
-	Rotate              Rotation
-	border              border
+	cfg              *Config
+	compare          int
+	area, neededArea int64
+	missingImages    int
+	mergedImages     int
+	Ltr, mergeBF     bool
+	MinFillRate      int
+	cropThreshold    int
+	Rotate           Rotation
+	border           border
 
 	bins []image.Rectangle
 
