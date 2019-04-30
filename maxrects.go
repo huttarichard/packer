@@ -30,13 +30,13 @@ type maxRects struct {
 	border      *border
 }
 
-func (mr *maxRects) insertNode(inputImage *inputImage) image.Point {
+func (mr *maxRects) insertNode(input *InputImage) image.Point {
 
 	var i, m int
 	minV := math.MaxInt32
 	mini := -1
 
-	img := inputImage.sizeCurrent
+	img := input.sizeCurrent
 
 	// fmt.Printf("Image: %s\n", img)
 	if img.Dx() == 0 || img.Dy() == 0 {
@@ -137,8 +137,8 @@ func (mr *maxRects) insertNode(inputImage *inputImage) image.Point {
 	}
 	if bestIsRotated {
 		img.Max = image.Pt(img.Max.Y, img.Max.X)
-		inputImage.rotated = !inputImage.rotated
-		inputImage.sizeCurrent.Max = image.Pt(inputImage.sizeCurrent.Max.Y, inputImage.sizeCurrent.Max.X)
+		input.rotated = !input.rotated
+		input.sizeCurrent.Max = image.Pt(input.sizeCurrent.Max.Y, input.sizeCurrent.Max.X)
 	}
 
 	// fmt.Printf("Mini: %d\n", mini)

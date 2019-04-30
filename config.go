@@ -31,13 +31,13 @@ func DefaultConfig() *Config {
 		Extrude:           0,
 		Rotate:            false,
 		Square:            true,
-		AutoGrow:          true,
+		AutoGrow:          false,
 		Autosize:          true,
 		CropThreshold:     1,
 		AutoSizeThreshold: 100,
 		SortOrder:         OrderByMax,
 		MinTextureSizeX:   32,
 		MinTextureSizeY:   32,
-		Heuristic:         HBaf,
+		Heuristic:         HTl,
 	}
 }

@@ -10,9 +10,9 @@ import (
 	"io"
 )
 
-// inputImage is the image wrapper that defines the position of the
-type inputImage struct {
-	Image draw.Image
+// InputImage is the image wrapper that defines the position of the
+type InputImage struct {
+	image draw.Image
 
 	hash      uint64
 	textureID int
@@ -27,21 +27,36 @@ type inputImage struct {
 	cropped, rotated bool
 }
 
+// PackedPosition gets the position of the image within the packed image
+func (i *InputImage) PackedPosition() image.Point {
+	return i.pos
+}
+
+// Hash gets the image hash value
+func (i *InputImage) Hash() uint64 {
+	return i.hash
+}
+
+// TextureID gets the target image (output) texture id
+func (i *InputImage) TextureID() int {
+	return i.textureID
+}
+
 type images struct {
-	inputImages []*inputImage
+	inputImages []*InputImage
 	sortOrder   SortOrder
 }
 
 func (im *images) Less(i, j int) bool {
 	switch im.sortOrder {
 	case OrderByWidth:
-		return compareImageByWidth(im.inputImages[i].Image.Bounds(), im.inputImages[j].Image.Bounds())
+		return compareImageByWidth(im.inputImages[i].image.Bounds(), im.inputImages[j].image.Bounds())
 	case OrderByHeight:
-		return compareImageByHeight(im.inputImages[i].Image.Bounds(), im.inputImages[j].Image.Bounds())
+		return compareImageByHeight(im.inputImages[i].image.Bounds(), im.inputImages[j].image.Bounds())
 	case OrderByArea:
-		return compareImageByArea(im.inputImages[i].Image.Bounds(), im.inputImages[j].Image.Bounds())
+		return compareImageByArea(im.inputImages[i].image.Bounds(), im.inputImages[j].image.Bounds())
 	case OrderByMax:
-		return compareImageByMax(im.inputImages[i].Image.Bounds(), im.inputImages[j].Image.Bounds())
+		return compareImageByMax(im.inputImages[i].image.Bounds(), im.inputImages[j].image.Bounds())
 	}
 	return false
 }
@@ -120,8 +135,8 @@ func (p *Packer) getInputImageData(img image.Image, hash uint64) error {
 		dImg = image.NewRGBA(img.Bounds())
 		draw.Draw(dImg, dImg.Bounds(), img, img.Bounds().Min, draw.Src)
 	}
-	t := &inputImage{}
-	t.Image = dImg
+	t := &InputImage{}
+	t.image = dImg
 	t.hash = hash
 	t.id = p.getID()
 	t.size = dImg.Bounds()
