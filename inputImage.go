@@ -32,6 +32,11 @@ func (i *InputImage) PackedPosition() image.Point {
 	return i.pos
 }
 
+// Bounds get the bounds for the provided image
+func (i *InputImage) Bounds() image.Rectangle {
+	return i.size
+}
+
 // Hash gets the image hash value
 func (i *InputImage) Hash() uint64 {
 	return i.hash

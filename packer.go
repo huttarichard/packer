@@ -286,13 +286,14 @@ func (p *Packer) writeImages() error {
 			} else {
 
 				// fmt.Printf("Drawing at: %s, %s\n", pos, crop)
-
-				draw.Draw(texture.Image, image.Rectangle{image.Pt(pos.X, pos.Y), image.Pt(pos.X+img.crop.Dx(), pos.Y+img.crop.Dy())}, img.image, image.ZP, draw.Src)
+				size = image.Rectangle{image.Pt(pos.X, pos.Y), image.Pt(pos.X+img.crop.Dx(), pos.Y+img.crop.Dy())}
+				draw.Draw(texture.Image, size, img.image, image.ZP, draw.Src)
 			}
 		}
 
 		// clear the image data
 		img.image = nil
+		img.size = size
 
 		select {
 		case <-p.ctx.Done():
