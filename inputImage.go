@@ -78,24 +78,24 @@ var (
 )
 
 // AddImageBytes add the image in the form of raw bytes
-func (p *Packer) AddImageBytes(data []byte) error {
+func (p *Packer) AddImageBytes(data []byte) (*InputImage, error) {
 	return p.addImageBytes(data)
 }
 
 // AddImageReader adds the image from the reader
-func (p *Packer) AddImageReader(r io.Reader) error {
+func (p *Packer) AddImageReader(r io.Reader) (*InputImage, error) {
 	return p.addImage(r)
 }
 
 // AddImage adds the image with the hash provided
-func (p *Packer) AddImage(img image.Image, hash ...uint64) error {
+func (p *Packer) AddImage(img image.Image, hash ...uint64) (*InputImage, error) {
 
 	var h uint64
 	if len(hash) == 0 || (len(hash) > 0 && hash[0] == 0) {
 
 		buf := &bytes.Buffer{}
 		if err := jpeg.Encode(buf, img, nil); err != nil {
-			return err
+			return nil, err
 		}
 		h = crc64.Checksum(buf.Bytes(), p.table)
 		buf.Reset()
@@ -106,18 +106,18 @@ func (p *Packer) AddImage(img image.Image, hash ...uint64) error {
 }
 
 // AddImage creates the new texture for the provided
-func (p *Packer) addImageBytes(data []byte) error {
+func (p *Packer) addImageBytes(data []byte) (*InputImage, error) {
 	buf := bytes.NewBuffer(data)
 	return p.addImage(buf)
 }
 
-func (p *Packer) addImage(r io.Reader) error {
+func (p *Packer) addImage(r io.Reader) (*InputImage, error) {
 	buf := &bytes.Buffer{}
 	tee := io.TeeReader(r, buf)
 
 	img, _, err := image.Decode(tee)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	hash := crc64.Checksum(buf.Bytes(), p.table)
@@ -125,9 +125,9 @@ func (p *Packer) addImage(r io.Reader) error {
 	return p.getInputImageData(img, hash)
 }
 
-func (p *Packer) getInputImageData(img image.Image, hash uint64) error {
+func (p *Packer) getInputImageData(img image.Image, hash uint64) (*InputImage, error) {
 	if img.Bounds().Dx() == 0 || img.Bounds().Dy() == 0 {
-		return ErrEmptyImage
+		return nil, ErrEmptyImage
 	}
 
 	dImg, ok := img.(draw.Image)
@@ -144,5 +144,5 @@ func (p *Packer) getInputImageData(img image.Image, hash uint64) error {
 
 	p.images.inputImages = append(p.images.inputImages, t)
 
-	return nil
+	return t, nil
 }

@@ -29,7 +29,8 @@ func TestPacker(t *testing.T) {
 		f, err := os.Open(file)
 		require.NoError(t, err)
 		defer f.Close()
-		require.NoError(t, p.AddImageReader(f))
+		_, err = p.AddImageReader(f)
+		require.NoError(t, err)
 	}
 
 	require.NoError(t, p.Pack())
@@ -71,7 +72,8 @@ func BenchmarkPacker(b *testing.B) {
 	getPacker := func(b *testing.B) *Packer {
 		p := New(DefaultConfig())
 		for _, image := range images {
-			require.NoError(b, p.AddImageBytes(image))
+			_, err := p.AddImageBytes(image)
+			require.NoError(b, err)
 		}
 		return p
 	}
