@@ -292,7 +292,7 @@ func (p *Packer) writeImages() error {
 		}
 
 		// clear the image data
-		img.image = nil
+		// img.image = nil
 		img.size = size
 
 		select {

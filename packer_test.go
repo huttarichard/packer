@@ -2,6 +2,7 @@ package packer
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"image/jpeg"
 	"io/ioutil"
@@ -13,35 +14,94 @@ import (
 
 // TestPacker tests the image packer
 func TestPacker(t *testing.T) {
-	p := New(DefaultConfig())
+	t.Run("Packing", func(t *testing.T) {
+		p := New(DefaultConfig())
 
-	var files []string
-	err := filepath.Walk("./tests", func(path string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(path, "jpg") && !strings.HasPrefix(info.Name(), "joined") {
-			files = append(files, path)
+		var files []string
+		err := filepath.Walk("./tests", func(path string, info os.FileInfo, err error) error {
+			if strings.HasSuffix(path, "jpg") && !strings.HasPrefix(info.Name(), "joined") {
+				files = append(files, path)
+			}
+			return nil
+		})
+		require.NoError(t, err)
+
+		for _, file := range files {
+			t.Logf("Reading: %s", file)
+			f, err := os.Open(file)
+			require.NoError(t, err)
+			defer f.Close()
+			_, err = p.AddImageReader(f)
+			require.NoError(t, err)
 		}
-		return nil
+
+		require.NoError(t, p.Pack())
+
+		for i, img := range p.OutputImages {
+			t.Logf("Writing image: %d", i)
+			f, err := os.Create(filepath.Join("tests", fmt.Sprintf("joined_%d.jpg", i)))
+			require.NoError(t, err)
+			defer f.Close()
+			require.NoError(t, jpeg.Encode(f, img, &jpeg.Options{Quality: 100}))
+		}
+
 	})
-	require.NoError(t, err)
 
-	for _, file := range files {
-		t.Logf("Reading: %s", file)
-		f, err := os.Open(file)
-		require.NoError(t, err)
-		defer f.Close()
-		_, err = p.AddImageReader(f)
-		require.NoError(t, err)
-	}
+	t.Run("Consistency", func(t *testing.T) {
+		cfg := DefaultConfig()
+		cfg.AutoGrow = true
+		cfg.Square = false
+		p := New(cfg)
 
-	require.NoError(t, p.Pack())
-
-	for i, img := range p.OutputImages {
-		t.Logf("Writing image: %d", i)
-		f, err := os.Create(filepath.Join("tests", fmt.Sprintf("joined_%d.jpg", i)))
+		var files []string
+		err := filepath.Walk("./tests", func(path string, info os.FileInfo, err error) error {
+			if strings.HasSuffix(path, "jpg") && !strings.HasPrefix(info.Name(), "joined") && !strings.HasPrefix(info.Name(), "consist") {
+				files = append(files, path)
+			}
+			return nil
+		})
 		require.NoError(t, err)
-		defer f.Close()
-		require.NoError(t, jpeg.Encode(f, img, &jpeg.Options{Quality: 100}))
-	}
+
+		for i := 0; i < 15; i++ {
+			file := files[i]
+			t.Logf("Reading: %s", file)
+			f, err := os.Open(file)
+			require.NoError(t, err)
+			defer f.Close()
+			_, err = p.AddImageReader(f)
+			require.NoError(t, err)
+		}
+
+		require.NoError(t, p.Pack())
+
+		output := p.OutputImages[0]
+		require.NotNil(t, output)
+		for _, img := range p.OutputImages {
+			if testing.Verbose() {
+				f, err := os.Create(filepath.Join("tests", "consist.jpg"))
+				require.NoError(t, err)
+				defer f.Close()
+				require.NoError(t, jpeg.Encode(f, img, &jpeg.Options{Quality: 100}))
+			}
+		}
+
+		for _, img := range p.images.inputImages {
+
+			for y := 0; y < img.Bounds().Dy(); y++ {
+				for x := 0; x < img.Bounds().Dx(); x++ {
+					c1 := img.image.At(x, y)
+					c2 := output.At(img.pos.X+x, img.pos.Y+y)
+					assert.Equal(t, c1, c2)
+				}
+			}
+			if testing.Verbose() {
+				f, err := os.Create(filepath.Join("tests", fmt.Sprintf("consist_sub_%d_%d.jpg", img.pos.X, img.pos.Y)))
+				require.NoError(t, err)
+				defer f.Close()
+				require.NoError(t, jpeg.Encode(f, img.image, &jpeg.Options{Quality: 100}))
+			}
+		}
+	})
 }
 
 // BenchmarkPacker banches the packer

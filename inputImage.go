@@ -47,6 +47,11 @@ func (i *InputImage) TextureID() int {
 	return i.textureID
 }
 
+// Image returns the input image
+func (i *InputImage) Image() draw.Image {
+	return i.image
+}
+
 type images struct {
 	inputImages []*InputImage
 	sortOrder   SortOrder
