@@ -1,9 +1,12 @@
+// +build integration
+
 package packer
 
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"image"
 	"image/jpeg"
 	"io/ioutil"
 	"os"
@@ -62,8 +65,8 @@ func TestPacker(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		for i := 0; i < 15; i++ {
-			file := files[i]
+		// for i := 0; i < 15; i++ {
+		for _, file := range files {
 			t.Logf("Reading: %s", file)
 			f, err := os.Open(file)
 			require.NoError(t, err)
@@ -101,6 +104,70 @@ func TestPacker(t *testing.T) {
 				require.NoError(t, jpeg.Encode(f, img.image, &jpeg.Options{Quality: 100}))
 			}
 		}
+	})
+
+	t.Run("Dups", func(t *testing.T) {
+		cfg1 := DefaultConfig()
+		cfg1.TextureHeight = 4 * 8196
+		cfg1.TextureWidth = 4 * 8196
+
+		cfg2 := DefaultConfig()
+		cfg2.AutoGrow = true
+		// cfg.AutoGrow = false
+		// cfg.Square = false
+
+		type configName struct {
+			c    *Config
+			name string
+		}
+		var configs = []*configName{
+			{c: cfg1, name: "Normal"},
+			{c: cfg2, name: "AutoGrow"},
+		}
+
+		testFunc := func(t *testing.T, cfg *Config) {
+			p := New(cfg)
+
+			var files []string
+			err := filepath.Walk("./rl_tests", func(path string, info os.FileInfo, err error) error {
+				if strings.HasSuffix(path, "jpg") && !strings.HasPrefix(info.Name(), "joined") {
+					files = append(files, path)
+				}
+				return nil
+			})
+			require.NoError(t, err)
+
+			var images []*InputImage
+			for _, file := range files {
+				f, err := os.Open(file)
+				require.NoError(t, err)
+
+				i, err := p.AddImageReader(f)
+				require.NoError(t, err)
+				images = append(images, i)
+			}
+
+			require.NoError(t, p.Pack())
+
+			var poses = map[string]struct{}{}
+			for _, i := range images {
+				if i.pos.Eq(image.Pt(999999, 999999)) {
+					continue
+				}
+				_, ok := poses[i.pos.String()]
+				require.False(t, ok, i.pos.String())
+
+				poses[i.pos.String()] = struct{}{}
+
+			}
+		}
+
+		for _, c := range configs {
+			t.Run(c.name, func(t *testing.T) {
+				testFunc(t, c.c)
+			})
+		}
+
 	})
 }
 

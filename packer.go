@@ -46,7 +46,8 @@ type Packer struct {
 
 	table *crc64.Table
 
-	lock sync.Mutex
+	lock  sync.Locker
+	hlock sync.Locker
 
 	ctx context.Context
 }
@@ -71,6 +72,8 @@ func newPacker(ctx context.Context, cfg *Config) *Packer {
 		images: &images{sortOrder: cfg.SortOrder},
 		table:  crc64.MakeTable(crc64.ECMA),
 		border: border{l: cfg.Border, r: cfg.Border},
+		lock:   &sync.Mutex{},
+		hlock:  &sync.Mutex{},
 	}
 
 	return p
@@ -90,32 +93,6 @@ func (p *Packer) Pack() (err error) {
 	if err = p.writeImages(); err != nil {
 		return
 	}
-
-	// for j, texture := range textures {
-	// 	for i, img := range p.images.inputImages {
-	// 		if img.textureID != j {
-	// 			continue
-	// 		}
-	// 		pos := image.Pt(img.pos.X+p.border.l+p.cfg.Extrude, img.pos.Y+p.border.t+p.cfg.Extrude)
-	// 		var size, sizeOrig, crop image.Rectangle
-
-	// 		sizeOrig = img.size
-	// 		if p.cfg.CropThreshold == 0 {
-	// 			size = img.size
-	// 			crop = image.Rect(0, 0, size.Dx(), size.Dy())
-	// 		} else {
-	// 			size = img.crop
-	// 			crop = img.crop
-	// 		}
-
-	// 		if img.rotated {
-	// 			//transpose size
-	// 			size.Max = image.Pt(size.Max.Y, size.Max.X)
-	// 			crop = size
-	// 		}
-
-	// 	}
-	// }
 
 	return
 }
@@ -429,6 +406,7 @@ func (p *Packer) growingImage(heur Heuristic, w, h int, wh bool) error {
 	}
 
 	if p.missingImages != 0 {
+		p.clearBin(0)
 		return p.growingImage(heur, w, h, wh)
 	}
 	p.area = int64(areaBuf)
@@ -625,9 +603,18 @@ type border struct {
 }
 
 // getID gets the nextID
-func (p *Packer) getID() int {
+func (p *Packer) appendImage(i *InputImage) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.nextID++
-	return p.nextID
+
+	i.id = p.nextID
+	p.images.inputImages = append(p.images.inputImages, i)
+
 }
+
+// func (p *Packer) checkSumID(data []byte) uint64, int {
+// 	p.hlock.Lock()
+// 	defer p.hlock.Unlock()
+// 	return crc64.Checksum(data, p.table)
+// }

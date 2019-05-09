@@ -145,14 +145,14 @@ func (p *Packer) getInputImageData(img image.Image, hash uint64) (*InputImage, e
 		dImg = image.NewRGBA(img.Bounds())
 		draw.Draw(dImg, dImg.Bounds(), img, img.Bounds().Min, draw.Src)
 	}
+
 	t := &InputImage{}
 	t.image = dImg
 	t.hash = hash
-	t.id = p.getID()
 	t.size = dImg.Bounds()
 	t.crop = p.crop(dImg)
 
-	p.images.inputImages = append(p.images.inputImages, t)
+	p.appendImage(t)
 
 	return t, nil
 }
